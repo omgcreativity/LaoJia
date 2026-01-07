@@ -14,31 +14,18 @@ if not auth.auth_flow():
 
 # --- 2. 获取当前用户及配置 ---
 username = st.session_state.username
-user_profile = storage.load_profile(username)
+# user_profile = storage.load_profile(username) # 如果只是存Key，这行暂时不需要
 
-# API Key 处理策略：
-# 1. 优先使用环境变量 GEMINI_API_KEY
-# 2. 如果环境变量不存在，尝试从用户配置中读取
-# 3. 如果都没有，提示用户输入并保存
+# 【安全修正】只从环境变量读取 Key
+# 这样 Key 只存在于 Zeabur 的后台，代码里和 GitHub 上完全没有痕迹
 api_key = os.getenv("GEMINI_API_KEY")
 
 if not api_key:
-    if "api_key" in user_profile and user_profile["api_key"]:
-        api_key = user_profile["api_key"]
-    else:
-        st.sidebar.warning("⚠️ 未检测到系统 API Key")
-        user_input_key = st.sidebar.text_input("请输入 Gemini API Key", type="password")
-        if user_input_key:
-            api_key = user_input_key
-            if st.sidebar.button("保存 Key 到我的配置"):
-                user_profile["api_key"] = api_key
-                storage.save_profile(username, user_profile)
-                st.sidebar.success("Key 已保存！下次无需输入。")
-                st.rerun()
-        else:
-            st.error("请配置 API Key 才能开始对话")
-            st.stop()
+    # 只有在 Zeabur 没配置好环境变量时才会报错
+    st.error("🚨 系统配置错误：未检测到 API Key。请联系管理员（也就是你自己）在 Zeabur 环境变量中添加 GEMINI_API_KEY。")
+    st.stop()
 
+# 配置 Gemini
 genai.configure(api_key=api_key)
 
 # --- 3. 构建个性化 System Prompt ---

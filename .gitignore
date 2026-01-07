@@ -3,3 +3,12 @@ __pycache__/
 data/
 .env
 .DS_Store
+# 忽略数据文件夹
+data/
+*.json
+*.db
+*.sqlite
+
+# 忽略环境配置文件
+.env
+__pycache__/
