@@ -37,7 +37,7 @@ if prompt := st.chat_input("说点什么..."):
     
     # 调用 Gemini
     try:
-        model = genai.GenerativeModel("gemini-3-flash-preview")
+        model = genai.GenerativeModel("gemini-3-flash")
         chat = model.start_chat(history=st.session_state.history)
         response = chat.send_message(prompt)
         
@@ -51,6 +51,7 @@ if prompt := st.chat_input("说点什么..."):
     except Exception as e:
 
         st.error(f"发生错误: {e}")
+
 
 
 
