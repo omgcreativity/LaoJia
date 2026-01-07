@@ -15,7 +15,10 @@ if not auth.auth_flow():
 # --- 2. 获取当前用户及配置 ---
 username = st.session_state.username
 # user_profile = storage.load_profile(username) # 如果只是存Key，这行暂时不需要
-
+user_profile = storage.load_profile(username)
+# 防止 user_profile 是 None (虽然 storage.py 里的逻辑通常返回 {})
+if not user_profile:
+    user_profile = {}
 # 【安全修正】只从环境变量读取 Key
 # 这样 Key 只存在于 Zeabur 的后台，代码里和 GitHub 上完全没有痕迹
 api_key = os.getenv("GEMINI_API_KEY")
