@@ -2,7 +2,7 @@ import os
 import json
 import hashlib
 
-DATA_FOLDER = "/app/data"
+DATA_FOLDER = "data"
 USERS_FILE = os.path.join(DATA_FOLDER, "users.json")
 
 def _get_user_folder(username):
