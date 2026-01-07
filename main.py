@@ -85,38 +85,100 @@ with chat_container:
     for msg in st.session_state.history:
         role = "user" if msg["role"] == "user" else "assistant"
         with st.chat_message(role):
-            # 兼容旧数据格式
-            content = msg["parts"][0] if isinstance(msg["parts"], list) else msg["parts"]
-            st.write(content)
+            # Handle structured parts
+            parts = msg["parts"]
+            if not isinstance(parts, list):
+                parts = [parts] # Normalize old format
+            
+            for part in parts:
+                if isinstance(part, str):
+                    st.write(part)
+                elif isinstance(part, dict):
+                    if part.get("type") == "text":
+                        st.write(part["text"])
+                    elif part.get("type") == "image":
+                        # Reconstruct path: data/users/{username}/{relative_path}
+                        img_path = os.path.join("data", "users", username, part["path"])
+                        if os.path.exists(img_path):
+                            st.image(img_path, width=300)
+
+# Camera Input Area
+with st.expander("📷 拍照给老贾看", expanded=False):
+    camera_img = st.camera_input("点击拍照", key="camera_input")
 
 if prompt := st.chat_input("和老贾说说话..."):
+    # Prepare User Content
+    user_content_parts = []
+    user_display_parts = [] # For saving to history
+    
+    # 1. Add Text
+    user_content_parts.append(prompt)
+    user_display_parts.append({"type": "text", "text": prompt})
+    
+    # 2. Add Image if captured
+    if camera_img:
+        # Convert to PIL Image
+        image = Image.open(camera_img)
+        user_content_parts.append(image)
+        
+        # Save to disk for history
+        rel_path = storage.save_image(username, image)
+        user_display_parts.append({"type": "image", "path": rel_path})
+
     with chat_container:
         with st.chat_message("user"):
             st.write(prompt)
+            if camera_img:
+                st.image(camera_img, width=300)
     
-    st.session_state.history.append({"role": "user", "parts": [prompt]})
+    # Update Session History
+    st.session_state.history.append({"role": "user", "parts": user_display_parts})
     
     try:
-        # Gemini history format adaptation if needed
-        chat_history = []
-        for msg in st.session_state.history:
+        # Rebuild Chat History for Gemini (Hydrate images)
+        gemini_history = []
+        for msg in st.session_state.history[:-1]: # Exclude the one we just added to process it freshly? 
+            # Actually, model.start_chat history should NOT include the current message.
+            # We send the current message via chat.send_message.
+            
+            role = "user" if msg["role"] == "user" else "model"
             parts = msg["parts"]
             if not isinstance(parts, list):
                 parts = [parts]
-            # Gemini expects 'user' or 'model' roles
-            role = "user" if msg["role"] == "user" else "model"
-            chat_history.append({"role": role, "parts": parts})
+            
+            gemini_parts = []
+            for part in parts:
+                if isinstance(part, str):
+                    gemini_parts.append(part)
+                elif isinstance(part, dict):
+                    if part.get("type") == "text":
+                        gemini_parts.append(part["text"])
+                    elif part.get("type") == "image":
+                        # Load image from disk
+                        img_path = os.path.join("data", "users", username, part["path"])
+                        if os.path.exists(img_path):
+                            try:
+                                img = Image.open(img_path)
+                                gemini_parts.append(img)
+                            except:
+                                pass # Skip missing images
+            
+            if gemini_parts:
+                gemini_history.append({"role": role, "parts": gemini_parts})
 
-        chat = model.start_chat(history=chat_history[:-1]) # send history excluding current prompt
-        response = chat.send_message(prompt)
+        chat = model.start_chat(history=gemini_history)
+        response = chat.send_message(user_content_parts)
         
         with chat_container:
             with st.chat_message("assistant"):
                 st.write(response.text)
                 chat_utils.play_audio(response.text)
 
-        st.session_state.history.append({"role": "model", "parts": [response.text]})
+        # Save Assistant Response
+        st.session_state.history.append({"role": "model", "parts": [{"type": "text", "text": response.text}]})
         storage.save_memory(username, st.session_state.history)
+        
+    except Exception as e:
             
     except Exception as e:
         if "429" in str(e):

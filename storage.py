@@ -1,12 +1,19 @@
 import os
 import json
 import hashlib
+import uuid
+from PIL import Image
 
 DATA_FOLDER = "data"
 USERS_FILE = os.path.join(DATA_FOLDER, "users.json")
 
 def _get_user_folder(username):
     return os.path.join(DATA_FOLDER, "users", username)
+
+def _get_images_folder(username):
+    folder = os.path.join(_get_user_folder(username), "images")
+    os.makedirs(folder, exist_ok=True)
+    return folder
 
 def init_storage():
     if not os.path.exists(DATA_FOLDER):
@@ -72,6 +79,14 @@ def load_profile(username):
             return json.load(f)
     return {}
 
+def save_image(username, image):
+    """Saves a PIL image and returns the relative path"""
+    images_folder = _get_images_folder(username)
+    filename = f"{uuid.uuid4()}.jpg"
+    filepath = os.path.join(images_folder, filename)
+    image.save(filepath)
+    return f"images/{filename}"
+
 def save_memory(username, history):
     user_folder = _get_user_folder(username)
     os.makedirs(user_folder, exist_ok=True)
@@ -79,12 +94,23 @@ def save_memory(username, history):
     data_to_save = []
     for msg in history:
         role = msg["role"]
-        # Handle different formats of 'parts'
-        if isinstance(msg["parts"], list):
-            text = msg["parts"][0]
-        else:
-            text = msg["parts"]
-        data_to_save.append({"role": role, "parts": [text]})
+        parts = msg["parts"]
+        
+        # Normalize parts to a list
+        if not isinstance(parts, list):
+            parts = [parts]
+            
+        serializable_parts = []
+        for part in parts:
+            if isinstance(part, str):
+                serializable_parts.append({"type": "text", "text": part})
+            elif isinstance(part, dict) and "image_path" in part:
+                # Already processed image dict
+                serializable_parts.append(part)
+            # We assume images in session state are already handled or won't be saved directly as objects here
+            # In main.py, we should convert PIL images to paths before appending to history for saving
+            
+        data_to_save.append({"role": role, "parts": serializable_parts})
         
     with open(os.path.join(user_folder, "memory.json"), "w", encoding="utf-8") as f:
         json.dump(data_to_save, f, ensure_ascii=False, indent=2)
@@ -95,7 +121,11 @@ def load_memory(username):
     if os.path.exists(memory_path):
         with open(memory_path, "r", encoding="utf-8") as f:
             try:
-                return json.load(f)
+                data = json.load(f)
+                # Convert back to simple format for app usage if needed, 
+                # or adapt app to use structured parts.
+                # For compatibility, we'll keep it structured.
+                return data
             except:
                 return []
     return []
