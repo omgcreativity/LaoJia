@@ -8,7 +8,7 @@ st.title("🤖 永不失忆的老贾")
 
 # 获取 API Key (部署到 Zeabur 后，我们会通过环境变量设置，这里先写个获取逻辑)
 # 优先从环境变量获取，如果没有则尝试从输入框获取（方便本地测试）
-api_key = os.getenv("AIzaSyA5BBcjyzy_wX5bL4wk3Vz2AhQWiGlhXuc")
+api_key = os.getenv("GEMINI_API_KEY")
 
 if not api_key:
     api_key = st.text_input("请输入 Gemini API Key", type="password")
@@ -51,4 +51,5 @@ if prompt := st.chat_input("说点什么..."):
     except Exception as e:
 
         st.error(f"发生错误: {e}")
+
 
