@@ -4,6 +4,7 @@ import os
 import auth
 import storage
 import chat_utils
+from PIL import Image
 
 # --- 0. 页面配置 ---
 st.set_page_config(page_title="老贾 - 会说话的AI助理", page_icon="🎙️")
