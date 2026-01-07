@@ -5,3 +5,4 @@ fastapi
 uvicorn
 python-multipart
 Pillow
+extra-streamlit-components

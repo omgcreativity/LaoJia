@@ -57,7 +57,7 @@ user_info_prompt = f"""
 full_system_prompt = base_prompt + user_info_prompt
 
 model = genai.GenerativeModel(
-    model_name="gemini-3-flash-preview", # 更新为更稳定的模型名称，或者保持用户原有的
+    model_name="gemini-3-flash-preview",
     system_instruction=full_system_prompt
 )
 
@@ -72,10 +72,7 @@ st.title(f"🎙️ 你的私人助理 - 老贾 ({user_profile.get('nickname', us
 with st.sidebar:
     st.write(f"当前用户: **{username}**")
     if st.button("退出登录"):
-        st.session_state.authenticated = False
-        st.session_state.username = None
-        st.session_state.history = []
-        st.rerun()
+        auth.logout()
     
     st.divider()
     chat_utils.render_sound_check()
@@ -83,10 +80,10 @@ with st.sidebar:
 chat_container = st.container()
 
 with chat_container:
-    for msg in st.session_state.history:
+    # 定义显示消息的帮助函数
+    def display_message(msg):
         role = "user" if msg["role"] == "user" else "assistant"
         with st.chat_message(role):
-            # Handle structured parts
             parts = msg["parts"]
             if not isinstance(parts, list):
                 parts = [parts] # Normalize old format
@@ -102,6 +99,23 @@ with chat_container:
                         img_path = os.path.join("data", "users", username, part["path"])
                         if os.path.exists(img_path):
                             st.image(img_path, width=300)
+
+    # 分离历史记录
+    history = st.session_state.history
+    SHOW_LAST_N = 5
+    
+    if len(history) > SHOW_LAST_N:
+        with st.expander(f"🕒 查看更早的 {len(history) - SHOW_LAST_N} 条记录"):
+            for msg in history[:-SHOW_LAST_N]:
+                display_message(msg)
+        
+        # 显示最近的记录
+        for msg in history[-SHOW_LAST_N:]:
+            display_message(msg)
+    else:
+        # 记录较少时直接显示全部
+        for msg in history:
+            display_message(msg)
 
 # Camera Input Area
 with st.expander("📷 拍照给老贾看", expanded=False):

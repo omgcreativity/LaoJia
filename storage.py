@@ -58,6 +58,25 @@ def create_user(username, password, profile_data=None):
         
     return True, "注册成功"
 
+def update_session_token(username):
+    init_storage()
+    with open(USERS_FILE, "r", encoding="utf-8") as f:
+        users = json.load(f)
+    
+    if username in users:
+        token = str(uuid.uuid4())
+        users[username]["token"] = token
+        with open(USERS_FILE, "w", encoding="utf-8") as f:
+            json.dump(users, f, ensure_ascii=False, indent=2)
+        return token
+    return None
+
+def verify_session_token(username, token):
+    user = get_user(username)
+    if user and user.get("token") == token:
+        return True
+    return False
+
 def verify_user(username, password):
     user = get_user(username)
     if not user:
