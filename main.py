@@ -179,8 +179,6 @@ if prompt := st.chat_input("和老贾说说话..."):
         storage.save_memory(username, st.session_state.history)
         
     except Exception as e:
-            
-    except Exception as e:
         if "429" in str(e):
             st.error("⚠️ 老贾有点累了（触发了免费版频率限制），请稍等几十秒再试。")
         else:
