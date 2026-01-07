@@ -3,8 +3,8 @@ import google.generativeai as genai
 import os
 
 # 页面标题
-st.set_page_config(page_title="我的私人AI伴侣", page_icon="🤖")
-st.title("🤖 永不失忆的 AI 伴侣")
+st.set_page_config(page_title="我的老贾", page_icon="🤖")
+st.title("🤖 永不失忆的老贾")
 
 # 获取 API Key (部署到 Zeabur 后，我们会通过环境变量设置，这里先写个获取逻辑)
 # 优先从环境变量获取，如果没有则尝试从输入框获取（方便本地测试）
@@ -51,3 +51,4 @@ if prompt := st.chat_input("说点什么..."):
     except Exception as e:
 
         st.error(f"发生错误: {e}")
+
