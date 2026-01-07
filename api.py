@@ -97,7 +97,7 @@ async def chat(request: ChatRequest):
     """
 
     model = genai.GenerativeModel(
-        model_name="gemini-1.5-flash", # Use a stable model
+        model_name="gemini-3-flash-preview",
         system_instruction=base_prompt + user_info_prompt
     )
 
@@ -108,8 +108,20 @@ async def chat(request: ChatRequest):
         parts = msg["parts"]
         if not isinstance(parts, list):
             parts = [parts]
-        role = "user" if msg["role"] == "user" else "model"
-        chat_history.append({"role": role, "parts": parts})
+            
+        # Convert stored parts to Gemini compatible format (Text only for API simple version)
+        gemini_parts = []
+        for part in parts:
+            if isinstance(part, str):
+                gemini_parts.append(part)
+            elif isinstance(part, dict):
+                if part.get("type") == "text":
+                    gemini_parts.append(part["text"])
+                # Skip images for now in API to avoid path issues
+        
+        if gemini_parts:
+            role = "user" if msg["role"] == "user" else "model"
+            chat_history.append({"role": role, "parts": gemini_parts})
 
     # 5. Generate Response
     try:

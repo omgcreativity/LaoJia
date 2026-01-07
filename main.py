@@ -15,7 +15,6 @@ if not auth.auth_flow():
 
 # --- 2. 获取当前用户及配置 ---
 username = st.session_state.username
-# user_profile = storage.load_profile(username) # 如果只是存Key，这行暂时不需要
 user_profile = storage.load_profile(username)
 # 防止 user_profile 是 None (虽然 storage.py 里的逻辑通常返回 {})
 if not user_profile:

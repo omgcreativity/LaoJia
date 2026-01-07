@@ -44,8 +44,8 @@ def login_form():
                 if remember_me and cookie_manager:
                     token = storage.update_session_token(username)
                     expires = datetime.datetime.now() + datetime.timedelta(days=30)
-                    cookie_manager.set("username", username, expires_at=expires)
-                    cookie_manager.set("token", token, expires_at=expires)
+                    cookie_manager.set("username", username, expires_at=expires, key="login_set_user")
+                    cookie_manager.set("token", token, expires_at=expires, key="login_set_token")
                 
                 st.success(f"欢迎回来, {username}!")
                 time.sleep(0.5)
@@ -108,8 +108,8 @@ def register_form():
                 if cookie_manager:
                     token = storage.update_session_token(new_username)
                     expires = datetime.datetime.now() + datetime.timedelta(days=30)
-                    cookie_manager.set("username", new_username, expires_at=expires)
-                    cookie_manager.set("token", token, expires_at=expires)
+                    cookie_manager.set("username", new_username, expires_at=expires, key="reg_set_user")
+                    cookie_manager.set("token", token, expires_at=expires, key="reg_set_token")
                 
                 time.sleep(1)
                 st.rerun()

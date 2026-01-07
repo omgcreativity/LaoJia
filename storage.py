@@ -123,8 +123,8 @@ def save_memory(username, history):
         for part in parts:
             if isinstance(part, str):
                 serializable_parts.append({"type": "text", "text": part})
-            elif isinstance(part, dict) and "image_path" in part:
-                # Already processed image dict
+            elif isinstance(part, dict):
+                # Pass through structured parts (text or image)
                 serializable_parts.append(part)
             # We assume images in session state are already handled or won't be saved directly as objects here
             # In main.py, we should convert PIL images to paths before appending to history for saving
