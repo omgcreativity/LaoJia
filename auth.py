@@ -4,17 +4,17 @@ import time
 import extra_streamlit_components as stx
 import datetime
 
-# Cookie Manager Setup
-@st.cache_resource
+# Cookie Manager Helper
 def get_manager():
-    return stx.CookieManager(key="auth_cookie_manager")
+    return st.session_state.get("cookie_manager")
 
 def logout():
     """Logs out the user and clears session/cookies."""
     cookie_manager = get_manager()
-    # Clear cookies
-    cookie_manager.delete("username")
-    cookie_manager.delete("token")
+    # Clear cookies if manager is available
+    if cookie_manager:
+        cookie_manager.delete("username")
+        cookie_manager.delete("token")
     
     # Clear session state
     st.session_state.authenticated = False
@@ -41,7 +41,7 @@ def login_form():
                 st.session_state.username = username
                 
                 # Handle Persistent Login
-                if remember_me:
+                if remember_me and cookie_manager:
                     token = storage.update_session_token(username)
                     expires = datetime.datetime.now() + datetime.timedelta(days=30)
                     cookie_manager.set("username", username, expires_at=expires)
@@ -104,11 +104,12 @@ def register_form():
                 st.session_state.authenticated = True
                 st.session_state.username = new_username
                 
-                # Auto-login after registration (optional, set cookies too?)
-                token = storage.update_session_token(new_username)
-                expires = datetime.datetime.now() + datetime.timedelta(days=30)
-                cookie_manager.set("username", new_username, expires_at=expires)
-                cookie_manager.set("token", token, expires_at=expires)
+                # Auto-login after registration
+                if cookie_manager:
+                    token = storage.update_session_token(new_username)
+                    expires = datetime.datetime.now() + datetime.timedelta(days=30)
+                    cookie_manager.set("username", new_username, expires_at=expires)
+                    cookie_manager.set("token", token, expires_at=expires)
                 
                 time.sleep(1)
                 st.rerun()
@@ -116,8 +117,10 @@ def register_form():
                 st.error(msg)
 
 def auth_flow():
-    # Initialize CookieManager
-    cookie_manager = get_manager()
+    # Initialize CookieManager ONCE per run and store in session state
+    # This avoids "CachedWidgetWarning" and "DuplicateWidgetID" errors
+    cookie_manager = stx.CookieManager(key="auth_cookie_manager")
+    st.session_state["cookie_manager"] = cookie_manager
     
     # If already authenticated in session, return True
     if st.session_state.get("authenticated", False):
@@ -134,8 +137,8 @@ def auth_flow():
                 st.session_state.authenticated = True
                 st.session_state.username = c_username
                 st.toast(f"欢迎回来, {c_username} (自动登录)")
-                time.sleep(0.5) 
-                st.rerun() 
+                time.sleep(0.5)
+                st.rerun()
     except Exception as e:
         # Ignore cookie errors
         pass
