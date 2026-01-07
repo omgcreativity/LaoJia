@@ -66,7 +66,7 @@ user_info_prompt = f"""
 full_system_prompt = base_prompt + user_info_prompt
 
 model = genai.GenerativeModel(
-    model_name="gemini-2.0-flash-exp", # 更新为更稳定的模型名称，或者保持用户原有的
+    model_name="gemini-3-flash-preview", # 更新为更稳定的模型名称，或者保持用户原有的
     system_instruction=full_system_prompt
 )
 
@@ -129,4 +129,7 @@ if prompt := st.chat_input("和老贾说说话..."):
         storage.save_memory(username, st.session_state.history)
             
     except Exception as e:
-        st.error(f"连接出错: {e}")
+        if "429" in str(e):
+            st.error("⚠️ 老贾有点累了（触发了免费版频率限制），请稍等几十秒再试。")
+        else:
+            st.error(f"连接出错: {e}")

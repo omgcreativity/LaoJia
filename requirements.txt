@@ -1,3 +1,6 @@
 streamlit
 google-generativeai
 edge-tts
+fastapi
+uvicorn
+python-multipart
