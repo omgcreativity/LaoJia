@@ -43,7 +43,8 @@ def login_form():
                 # Handle Persistent Login
                 if remember_me and cookie_manager:
                     token = storage.update_session_token(username)
-                    expires = datetime.datetime.now() + datetime.timedelta(days=30)
+                    # Use UTC now + 30 days to avoid timezone issues
+                    expires = datetime.datetime.utcnow() + datetime.timedelta(days=30)
                     cookie_manager.set("username", username, expires_at=expires, key="login_set_user")
                     cookie_manager.set("token", token, expires_at=expires, key="login_set_token")
                 
@@ -107,7 +108,8 @@ def register_form():
                 # Auto-login after registration
                 if cookie_manager:
                     token = storage.update_session_token(new_username)
-                    expires = datetime.datetime.now() + datetime.timedelta(days=30)
+                    # Use UTC now + 30 days to avoid timezone issues
+                    expires = datetime.datetime.utcnow() + datetime.timedelta(days=30)
                     cookie_manager.set("username", new_username, expires_at=expires, key="reg_set_user")
                     cookie_manager.set("token", token, expires_at=expires, key="reg_set_token")
                 
@@ -126,11 +128,14 @@ def auth_flow():
     if st.session_state.get("authenticated", False):
         return True
 
+    # Give a tiny bit of time for cookies to sync (hacky but effective for Streamlit)
+    time.sleep(0.1)
+
     # Try to authenticate via cookies
     try:
-        cookies = cookie_manager.get_all()
-        c_username = cookies.get("username")
-        c_token = cookies.get("token")
+        # Use individual get calls for better reliability
+        c_username = cookie_manager.get("username")
+        c_token = cookie_manager.get("token")
         
         if c_username and c_token:
             if storage.verify_session_token(c_username, c_token):
@@ -141,6 +146,7 @@ def auth_flow():
                 st.rerun()
     except Exception as e:
         # Ignore cookie errors
+        # st.error(f"Cookie Error: {e}") # Debug only
         pass
 
     if "authenticated" not in st.session_state:
