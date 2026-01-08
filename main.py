@@ -1,4 +1,5 @@
 import streamlit as st
+import json
 import time
 import auth
 import storage
@@ -6,7 +7,40 @@ import chat_utils
 import os
 from PIL import Image
 
-# --- 0. 页面配置 ---
+# --- 新增：J1800 接口拦截逻辑 ---
+# 必须放在所有 UI 渲染之前
+query_params = st.query_params
+if "action" in query_params:
+    action = query_params["action"]
+    user = query_params.get("user")
+    
+    # J1800 取货接口: ?action=get&user=xxx
+    if action == "get" and user:
+        history = storage.load_memory(user)
+        if history and history[-1]["role"] == "user":
+            parts = history[-1]["parts"]
+            text = ""
+            for part in (parts if isinstance(parts, list) else [parts]):
+                if isinstance(part, str): text += part
+                elif isinstance(part, dict) and part.get("type") == "text":
+                    text += part["text"]
+            # 返回 JSON 并立即停止渲染
+            st.write(json.dumps({"has_new": True, "content": text}, ensure_ascii=False))
+        else:
+            st.write(json.dumps({"has_new": False}))
+        st.stop()
+
+    # J1800 还货接口: ?action=put&user=xxx&msg=yyy
+    if action == "put" and user and "msg" in query_params:
+        msg = query_params["msg"]
+        history = storage.load_memory(user)
+        if history and history[-1]["role"] == "user":
+            history.append({"role": "model", "parts": [{"type": "text", "text": msg}]})
+            storage.save_memory(user, history)
+            st.write(json.dumps({"status": "success"}))
+        st.stop()
+
+# --- 原有页面配置 ---
 st.set_page_config(page_title="老贾 - 会说话的AI助理", page_icon="🎙️")
 
 # --- 1. 认证流程 ---
@@ -41,7 +75,6 @@ def display_message(msg):
             elif isinstance(part, dict):
                 if part.get("type") == "text": st.write(part["text"])
                 elif part.get("type") == "image":
-                    # 注意：Streamlit无法直接访问data目录，通常需要配置静态映射或读取Buffer
                     img_path = os.path.join("data", "users", username, part["path"])
                     if os.path.exists(img_path):
                         st.image(img_path, width=300)
@@ -50,15 +83,13 @@ with chat_container:
     for msg in st.session_state.history:
         display_message(msg)
 
-# --- 4. 拍照功能扩展 ---
+# --- 4. 拍照功能 ---
 with st.expander("📷 拍照给老贾看", expanded=False):
     camera_img = st.camera_input("点击拍照", key="camera_input")
 
 # --- 5. 输入处理 ---
 if prompt := st.chat_input("和老贾说说话..."):
     user_display_parts = [{"type": "text", "text": prompt}]
-    
-    # 如果拍了照
     if camera_img:
         image = Image.open(camera_img)
         rel_path = storage.save_image(username, image)
@@ -69,18 +100,17 @@ if prompt := st.chat_input("和老贾说说话..."):
             st.write(prompt)
             if camera_img: st.image(camera_img, width=300)
     
-    # 存入数据库，等待 J1800 抓取
+    # 存入数据库
     st.session_state.history.append({"role": "user", "parts": user_display_parts})
     storage.save_memory(username, st.session_state.history)
     
-    # --- 轮询等待 J1800 ---
+    # --- 轮询等待 J1800 回传结果 ---
     with chat_container:
         with st.chat_message("assistant"):
             placeholder = st.empty()
             placeholder.markdown("⏳ 老贾正在通过 J1800 思考中...")
-            
             found_reply = False
-            for _ in range(30): # 等待 60 秒
+            for _ in range(30):
                 time.sleep(2)
                 latest_history = storage.load_memory(username)
                 if latest_history and latest_history[-1]["role"] == "model":
@@ -92,4 +122,4 @@ if prompt := st.chat_input("和老贾说说话..."):
                     break
             
             if not found_reply:
-                placeholder.error("💔 J1800 没反应，请确认小电脑是否正在运行 car_bot.py")
+                placeholder.error("💔 J1800 响应超时，请确认其正在运行。")
