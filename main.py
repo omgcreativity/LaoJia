@@ -7,13 +7,17 @@ import chat_utils
 import os
 from PIL import Image
 
-# --- 0. J1800 接口拦截逻辑 (必须放在最前面) ---
-query_params = st.query_params
-if "action" in query_params:
-    action = query_params["action"]
-    user = query_params.get("user")
+# --- 0. 强力拦截器：必须放在文件最最顶端 ---
+# 获取参数
+params = st.query_params
+
+if "action" in params:
+    action = params["action"]
+    user = params.get("user")
     
-    # J1800 取货接口: ?action=get&user=xxx
+    # 构造返回数据
+    result = {"has_new": False}
+    
     if action == "get" and user:
         history = storage.load_memory(user)
         if history and history[-1]["role"] == "user":
@@ -23,15 +27,15 @@ if "action" in query_params:
                 if isinstance(part, str): text += part
                 elif isinstance(part, dict) and part.get("type") == "text":
                     text += part["text"]
-            # 直接输出 JSON 并停止后续 UI 渲染
-            st.write(json.dumps({"has_new": True, "content": text}, ensure_ascii=False))
-        else:
-            st.write(json.dumps({"has_new": False}))
+            result = {"has_new": True, "content": text}
+            
+        # --- 关键修改：直接用 st.code 或 st.text 配合 st.stop() ---
+        # 这样返回的内容更干净，虽然带一点点 HTML，但 requests 可以处理
+        st.write(json.dumps(result, ensure_ascii=False))
         st.stop()
 
-    # J1800 还货接口: ?action=put&user=xxx&msg=yyy
-    if action == "put" and user and "msg" in query_params:
-        msg = query_params["msg"]
+    if action == "put" and user and "msg" in params:
+        msg = params["msg"]
         history = storage.load_memory(user)
         if history and history[-1]["role"] == "user":
             history.append({"role": "model", "parts": [{"type": "text", "text": msg}]})
