@@ -7,37 +7,37 @@ import chat_utils
 import os
 from PIL import Image
 
-# --- 0. 强力拦截器：必须放在文件最最顶端 ---
-# --- 第一步：拦截器（无视登录状态，直接根据参数返回 JSON） ---
-# 只要 URL 匹配 action=get，就直接 st.stop()，不走后面的登录检查
-params = st.query_params
-if "action" in params:
-    action = params["action"]
-    user = params.get("user")
-if a == "get" and u:
-        # 直接读取存储绕过所有认证逻辑
-        h = storage.load_memory(u)
+# --- 0. 强力拦截逻辑：必须放在 st.set_page_config 之前 ---
+q_params = st.query_params
+
+if "action" in q_params:
+    # 统一使用 action 和 user 变量名
+    action = q_params["action"]
+    user = q_params.get("user")
+    
+    if action == "get" and user:
+        # 1. 取货逻辑
+        h = storage.load_memory(user)
         res = {"has_new": False}
         if h and h[-1]["role"] == "user":
             p = h[-1]["parts"]
+            # 兼容多种格式提取文本
             txt = p[0]["text"] if isinstance(p[0], dict) else p[0]
             res = {"has_new": True, "content": txt}
         
-        # 这一步极其重要：用 st.write 输出 JSON，然后立即 st.stop()
+        # 2. 构造带特征标签的输出
         st.write(f"BRIDGE_DATA:{json.dumps(res, ensure_ascii=False)}:END")
-        st.stop() # 强制中断，不让它去加载登录页面
+        st.stop() # 立即停止渲染
         
-elif a == "put" and u:
-        h = storage.load_memory(u)
-        res = {"has_new": False}
+    elif action == "put" and user and "msg" in q_params:
+        # 3. 还货逻辑
+        msg = q_params["msg"]
+        h = storage.load_memory(user)
         if h and h[-1]["role"] == "user":
-            p = h[-1]["parts"]
-            txt = p[0]["text"] if isinstance(p[0], dict) else p[0]
-            res = {"has_new": True, "content": txt}
-        
-        # 这一步极其重要：用 st.write 输出 JSON，然后立即 st.stop()
-        st.write(f"BRIDGE_DATA:{json.dumps(res, ensure_ascii=False)}:END")
-        st.stop() # 强制中断，不让它去加载登录页面
+            h.append({"role": "model", "parts": [{"type": "text", "text": msg}]})
+            storage.save_memory(user, h)
+            st.write("BRIDGE_DATA:{\"status\":\"success\"}:END")
+        st.stop()
 
 # --- 1. 正常 UI 页面配置 ---
 st.set_page_config(page_title="老贾 - 会说话的AI助理", page_icon="🎙️")
