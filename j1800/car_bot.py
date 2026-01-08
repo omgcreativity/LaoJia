@@ -159,6 +159,8 @@ def run_laojia_bridge():
                             # DrissionPage 允许直接向后台标签页发送指令
                             
                             input_box = tab_gemini.ele('@placeholder=输入消息') or tab_gemini.ele('tag:textarea')
+                            if not input_box:
+                                raise Exception("未找到输入框 (可能车位已失效)")
                             input_box.input(question)
                             
                             send_btn = tab_gemini.ele('xpath://button[contains(., "发送")]') or tab_gemini.ele('@title=发送')
@@ -185,7 +187,8 @@ def run_laojia_bridge():
                             print("📡 暂无新消息...", end='\r')
                             
                     except Exception as parse_e:
-                         print(f"⚠️ 解析错误: {parse_e}")
+                         print(f"⚠️ 处理错误: {parse_e}")
+                         raise parse_e
                 else:
                     print(f"⚠️ 页面加载中... (文本长度: {len(page_text)})", end='\r')
 
@@ -198,8 +201,10 @@ def run_laojia_bridge():
                         # 必须对错误信息进行简单编码或截断，防止 URL 出错
                         safe_msg = str(e).replace('\n', ' ')[:50]
                         tab_laojia.get(f"{ZEABUR_URL}/?action=put&user={LAOJIA_USER}&msg=[⚠️ J1800 报警] {safe_msg}")
-                        error_count = 0
                      except: pass
+                     
+                     print("🔄 连续错误，退出程序以触发重启...")
+                     break 
 
             time.sleep(5)
 
