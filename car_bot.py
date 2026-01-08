@@ -66,13 +66,30 @@ def run_laojia_bridge():
         # IMPORTANT: Switch to the latest tab in case a new tab was opened
         tab_gemini = browser.latest_tab
         print(f"📍 当前页面: {tab_gemini.title}")
+        
+        # URL 跳转检查 (防止 J1800 响应慢导致还在车库页)
+        print("🔗 检查 URL 跳转状态...")
+        url_ok = False
+        for _ in range(15): # 等待 15 秒
+            if "/#/chat/" in tab_gemini.url:
+                print(f"✅ URL 确认: {tab_gemini.url}")
+                url_ok = True
+                break
+            time.sleep(1)
+        
+        if not url_ok:
+             print(f"⚠️ 警告: 15秒后 URL 仍未包含 /chat/ (当前: {tab_gemini.url})")
 
         # Wait for chat input to confirm we are in
         # Increased timeout for J1800
-        if not tab_gemini.wait.ele('tag:textarea', timeout=45):
+        # Fix: Use .ele() directly which waits (DrissionPage syntax fix)
+        if not tab_gemini.ele('tag:textarea', timeout=45):
                 print("⚠️ 警告: 45秒内未找到输入框，尝试刷新页面...")
                 tab_gemini.refresh()
                 time.sleep(5)
+                # Check again
+                if not tab_gemini.ele('tag:textarea', timeout=30):
+                    print("❌ 严重错误: 无法加载聊天页面 (可能被重定向到了登录页)")
         else:
                 print("✅ 成功抵达聊天页面")
 
@@ -101,7 +118,25 @@ def run_laojia_bridge():
         tab_laojia = browser.new_tab(f"{ZEABUR_URL}/?action=get&user={LAOJIA_USER}")
         time.sleep(8) 
 
-        print("🤖 双线程就绪，开始搬运...")
+        # ==========================================
+        # 3. 联动：自动打招呼 (Auto Hello)
+        # ==========================================
+        print("� 正在建立连接 (Auto Hello)...")
+        try:
+            input_box = tab_gemini.ele('@placeholder=输入消息') or tab_gemini.ele('tag:textarea')
+            if input_box:
+                # 发送上线通知，不作为对话内容，只是激活
+                # input_box.input("（系统：J1800 节点已上线，连接正常）")
+                # 暂时不发消息，避免打扰，或者仅打印日志
+                # 如果用户希望它是"老贾"，那应该由 api.py 的 prompt 决定。
+                # 这里我们只确保页面是活跃的。
+                pass
+        except:
+            pass
+
+        print("� 双线程就绪，开始搬运...")
+        
+        error_count = 0
         
         while True:
             try:
@@ -156,11 +191,25 @@ def run_laojia_bridge():
 
             except Exception as e:
                 print(f"\n⚠️ 异常: {e}")
-            
+                error_count += 1
+                if error_count >= 3: # 连续3次错误就报警
+                     try:
+                        print("🚨 发送报警信息...")
+                        # 必须对错误信息进行简单编码或截断，防止 URL 出错
+                        safe_msg = str(e).replace('\n', ' ')[:50]
+                        tab_laojia.get(f"{ZEABUR_URL}/?action=put&user={LAOJIA_USER}&msg=[⚠️ J1800 报警] {safe_msg}")
+                        error_count = 0
+                     except: pass
+
             time.sleep(5)
 
     except Exception as e:
         print(f"\n❌ 程序崩溃: {e}")
+        try:
+             safe_msg = str(e).replace('\n', ' ')[:50]
+             browser.new_tab(f"{ZEABUR_URL}/?action=put&user={LAOJIA_USER}&msg=[☠️ J1800 崩溃] {safe_msg}")
+             time.sleep(5)
+        except: pass
         browser.quit()
 
 if __name__ == "__main__":
