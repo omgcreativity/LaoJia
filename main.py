@@ -21,9 +21,18 @@ if "action" in q_params:
         res = {"has_new": False}
         if h and h[-1]["role"] == "user":
             p = h[-1]["parts"]
-            # 兼容多种格式提取文本
-            txt = p[0]["text"] if isinstance(p[0], dict) else p[0]
-            res = {"has_new": True, "content": txt}
+            # 兼容多种格式提取文本 (优先找文本内容)
+            txt = ""
+            for part in p:
+                if isinstance(part, str):
+                    txt = part
+                    break
+                elif isinstance(part, dict) and part.get("type") == "text":
+                    txt = part.get("text", "")
+                    break
+            
+            if txt:
+                res = {"has_new": True, "content": txt}
         
         # 2. 构造带特征标签的输出
         st.write(f"BRIDGE_DATA:{json.dumps(res, ensure_ascii=False)}:END")
