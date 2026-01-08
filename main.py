@@ -14,16 +14,30 @@ params = st.query_params
 if "action" in params:
     action = params["action"]
     user = params.get("user")
-    if action == "get" and user:
-        history = storage.load_memory(user)
+if a == "get" and u:
+        # 直接读取存储，绕过所有认证逻辑
+        h = storage.load_memory(u)
         res = {"has_new": False}
-        if history and history[-1]["role"] == "user":
-            # 提取消息文字
-            p = history[-1]["parts"]
+        if h and h[-1]["role"] == "user":
+            p = h[-1]["parts"]
             txt = p[0]["text"] if isinstance(p[0], dict) else p[0]
             res = {"has_new": True, "content": txt}
-        st.write(json.dumps(res, ensure_ascii=False))
-        st.stop() # 必须 stop，否则会继续运行后面的 auth.auth_flow()
+        
+        # 这一步极其重要：用 st.write 输出 JSON，然后立即 st.stop()
+        st.write(f"BRIDGE_DATA:{json.dumps(res, ensure_ascii=False)}:END")
+        st.stop() # 强制中断，不让它去加载登录页面
+        
+    elif a == "put" and u:
+        h = storage.load_memory(u)
+        res = {"has_new": False}
+        if h and h[-1]["role"] == "user":
+            p = h[-1]["parts"]
+            txt = p[0]["text"] if isinstance(p[0], dict) else p[0]
+            res = {"has_new": True, "content": txt}
+        
+        # 这一步极其重要：用 st.write 输出 JSON，然后立即 st.stop()
+        st.write(f"BRIDGE_DATA:{json.dumps(res, ensure_ascii=False)}:END")
+        st.stop() # 强制中断，不让它去加载登录页面
 
 # --- 1. 正常 UI 页面配置 ---
 st.set_page_config(page_title="老贾 - 会说话的AI助理", page_icon="🎙️")
