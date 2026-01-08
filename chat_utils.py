@@ -34,7 +34,7 @@ def render_sound_check():
         </script>
     </div>
     """
-    components.html(sound_check_html, height=120)
+    components.html(sound_check_html, height=160)
 
 def clean_markdown(text):
     text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
