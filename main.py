@@ -27,7 +27,7 @@ if a == "get" and u:
         st.write(f"BRIDGE_DATA:{json.dumps(res, ensure_ascii=False)}:END")
         st.stop() # 强制中断，不让它去加载登录页面
         
-    elif a == "put" and u:
+elif a == "put" and u:
         h = storage.load_memory(u)
         res = {"has_new": False}
         if h and h[-1]["role"] == "user":
