@@ -8,40 +8,22 @@ import os
 from PIL import Image
 
 # --- 0. 强力拦截器：必须放在文件最最顶端 ---
-# 获取参数
+# --- 第一步：拦截器（无视登录状态，直接根据参数返回 JSON） ---
+# 只要 URL 匹配 action=get，就直接 st.stop()，不走后面的登录检查
 params = st.query_params
-
 if "action" in params:
     action = params["action"]
     user = params.get("user")
-    
-    # 构造返回数据
-    result = {"has_new": False}
-    
     if action == "get" and user:
         history = storage.load_memory(user)
+        res = {"has_new": False}
         if history and history[-1]["role"] == "user":
-            parts = history[-1]["parts"]
-            text = ""
-            for part in (parts if isinstance(parts, list) else [parts]):
-                if isinstance(part, str): text += part
-                elif isinstance(part, dict) and part.get("type") == "text":
-                    text += part["text"]
-            result = {"has_new": True, "content": text}
-            
-        # --- 关键修改：直接用 st.code 或 st.text 配合 st.stop() ---
-        # 这样返回的内容更干净，虽然带一点点 HTML，但 requests 可以处理
-        st.write(json.dumps(result, ensure_ascii=False))
-        st.stop()
-
-    if action == "put" and user and "msg" in params:
-        msg = params["msg"]
-        history = storage.load_memory(user)
-        if history and history[-1]["role"] == "user":
-            history.append({"role": "model", "parts": [{"type": "text", "text": msg}]})
-            storage.save_memory(user, history)
-            st.write(json.dumps({"status": "success"}))
-        st.stop()
+            # 提取消息文字
+            p = history[-1]["parts"]
+            txt = p[0]["text"] if isinstance(p[0], dict) else p[0]
+            res = {"has_new": True, "content": txt}
+        st.write(json.dumps(res, ensure_ascii=False))
+        st.stop() # 必须 stop，否则会继续运行后面的 auth.auth_flow()
 
 # --- 1. 正常 UI 页面配置 ---
 st.set_page_config(page_title="老贾 - 会说话的AI助理", page_icon="🎙️")
