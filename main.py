@@ -15,7 +15,7 @@ if "action" in params:
     action = params["action"]
     user = params.get("user")
 if a == "get" and u:
-        # 直接读取存储，绕过所有认证逻辑
+        # 直接读取存储绕过所有认证逻辑
         h = storage.load_memory(u)
         res = {"has_new": False}
         if h and h[-1]["role"] == "user":
