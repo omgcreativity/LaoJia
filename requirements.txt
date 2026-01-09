@@ -1,8 +1,5 @@
 streamlit
 google-generativeai
 edge-tts
-fastapi
-uvicorn
-python-multipart
 Pillow
 extra-streamlit-components
