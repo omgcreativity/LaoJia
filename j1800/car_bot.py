@@ -1,3 +1,4 @@
+import sys
 import time
 import json
 from DrissionPage import ChromiumPage, ChromiumOptions
@@ -160,7 +161,8 @@ def run_laojia_bridge():
                             
                             input_box = tab_gemini.ele('@placeholder=输入消息') or tab_gemini.ele('tag:textarea')
                             if not input_box:
-                                raise Exception("未找到输入框 (可能车位已失效)")
+                                print("❌ 严重错误: 未找到输入框 (可能车位已失效)，准备重启...")
+                                sys.exit(1) # 退出脚本，触发 run_bot.sh 重启
                             input_box.input(question)
                             
                             send_btn = tab_gemini.ele('xpath://button[contains(., "发送")]') or tab_gemini.ele('@title=发送')

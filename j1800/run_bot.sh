@@ -5,6 +5,7 @@
 
 # 请确保路径正确，建议放在 /home/ubuntu/LaoJia-main/ 下
 cd "$(dirname "$0")"
+echo "📂 Working directory: $(pwd)"
 
 echo "🚀 Starting LaoJia J1800 Bot..."
 
@@ -24,7 +25,7 @@ while true; do
     echo "⏰ $(date): Starting python script..."
     
     # 运行 Python 脚本 (使用当前环境的 python)
-    python car_bot.py
+    python3 car_bot.py
     
     # 如果脚本退出（崩溃），等待 10 秒后重启
     echo "⚠️ Script exited. Restarting in 10 seconds..."

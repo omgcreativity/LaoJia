@@ -85,14 +85,26 @@ with st.sidebar:
         user_profile["chat_mode"] = current_mode_code
         storage.save_profile(username, user_profile)
 
-    api_key = user_profile.get("api_key")
+    # API Key 逻辑：用户设置优先 > 系统环境变量
+    system_api_key = os.environ.get("GEMINI_API_KEY", "")
+    stored_user_key = user_profile.get("api_key", "")
+    
+    api_key = stored_user_key if stored_user_key else system_api_key
+
     if current_mode_code == "api":
-        new_api_key = st.text_input("Gemini API Key", value=api_key or "", type="password")
-        if new_api_key != api_key:
+        label = "Gemini API Key"
+        if system_api_key:
+            label += " (留空则使用系统预设)"
+            
+        new_api_key = st.text_input(label, value=stored_user_key or "", type="password")
+        
+        if new_api_key != stored_user_key:
             user_profile["api_key"] = new_api_key
             storage.save_profile(username, user_profile)
-            api_key = new_api_key
             st.rerun()
+        
+        # 如果用户清空了输入框，回退到系统 Key
+        api_key = new_api_key if new_api_key else system_api_key
 
 chat_container = st.container()
 
